@@ -1,0 +1,42 @@
+balance_scale: https://archive.ics.uci.edu/dataset/12/balance+scale
+breast_cancer: https://archive.ics.uci.edu/dataset/15/breast+cancer+wisconsin+original
+cardiotocography: https://archive.ics.uci.edu/dataset/193/cardiotocography
+energy_y1: https://archive.ics.uci.edu/dataset/242/energy+efficiency
+energy_y2: https://archive.ics.uci.edu/dataset/242/energy+efficiency
+iris: https://archive.ics.uci.edu/dataset/53/iris
+mammographic: https://archive.ics.uci.edu/dataset/161/mammographic+mass
+pendigits: https://archive.ics.uci.edu/dataset/81/pen+based+recognition+of+handwritten+digits
+seeds: https://archive.ics.uci.edu/dataset/236/seeds
+tic_tac_toe: https://archive.ics.uci.edu/dataset/101/tic+tac+toe+endgame
+vertebral_2C: https://archive.ics.uci.edu/dataset/212/vertebral+column
+vertebral_3C: https://archive.ics.uci.edu/dataset/212/vertebral+column
+arrythmia: https://archive.ics.uci.edu/dataset/5/arrhythmia
+redwine_quality: https://archive.ics.uci.edu/dataset/186/wine+quality
+whitewine_quality: https://archive.ics.uci.edu/dataset/186/wine+quality
+wine: https://archive.ics.uci.edu/dataset/109/wine
+har: https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones
+dermatology: https://archive.ics.uci.edu/dataset/33/dermatology
+
+
+Does not work:
+acute: https://archive.ics.uci.edu/dataset/184/acute+inflammations
+
+
+
+Modifications:
+-rows with "?" removed.
+-ID column removed.
+-energy_y1 and energy_y2 class labels reclassified into 3 labels (simple min-max scaling).
+-class labels numeralized.
+	-L,B,R in balance_scale is 0,1,2;
+	-setosa,versicolor,virginica in iris is 0,1,2;
+	-x,o,b in tic_tac_toe is 1,0,2;
+	-Normal,Abnormal in vertebral_2C is 0,1;
+	-Normal,Hernia,Spondylolisthesis in vertebral_3C is 0,1,2;
+	-1,2,3,4,5,6 in har is 0,1,2,3,4,5;
+	-1,2,3,4,5,6 in dermatology is 0,1,2,3,4,5;
+	-1,2,3,... in arrythmia is 0,1,2,...;
+-mammographic has a BI-RADS evaluation that is "55", that sample is removed.
+-har feature names are X1,X2 and so on, original feature order is kept.
+-arrythmia original feature order kept with some feature name changes.
+-arrythmia "J" feature removed due to "?" fields.
