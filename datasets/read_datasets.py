@@ -5,7 +5,7 @@ import os
 #Python public packages
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from tensorflow.keras.utils import to_categorical
 
 #Our packages
@@ -72,3 +72,11 @@ class Dataset(object):
     
     def getYtest():
         return self.Ytest
+    
+    def rescale_features(self, feature_range):
+        Xall = np.concatenate((self.Xtrain, self.Xtest))
+        scaler = MinMaxScaler(feature_range = feature_range)
+        scaler.fit(Xall)
+        self.Xtest = scaler.transform(self.Xtest)
+        self.Xtrain = scaler.transform(self.Xtrain)
+        return self.Xtrain, self.Xtest
