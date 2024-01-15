@@ -16,6 +16,12 @@ whitewine_quality: https://archive.ics.uci.edu/dataset/186/wine+quality
 wine: https://archive.ics.uci.edu/dataset/109/wine
 har: https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones
 dermatology: https://archive.ics.uci.edu/dataset/33/dermatology
+epileptic_seizure_2C: https://archive.ics.uci.edu/dataset/388/epileptic+seizure+recognition kaggle: https://www.kaggle.com/datasets/yasserhessein/epileptic-seizure-recognition
+epileptic_seizure_5C: https://archive.ics.uci.edu/dataset/388/epileptic+seizure+recognition kaggle: https://www.kaggle.com/datasets/yasserhessein/epileptic-seizure-recognition
+gas_sensor: https://archive.ics.uci.edu/dataset/224/gas+sensor+array+drift+dataset
+parkinsons: https://archive.ics.uci.edu/dataset/470/parkinson+s+disease+classification
+spectf: https://archive.ics.uci.edu/dataset/96/spectf+heart
+lung_cancer: https://archive.ics.uci.edu/dataset/62/lung+cancer
 
 
 Does not work:
@@ -40,3 +46,4 @@ Modifications:
 -har feature names are X1,X2 and so on, original feature order is kept.
 -arrythmia original feature order kept with some feature name changes.
 -arrythmia "J" feature removed due to "?" fields.
+-epileptic_seizure_2C is the 2 class version of epileptic_seizure_5C; class "1" is not modified, 2,3,4,5 are modified to "2".
