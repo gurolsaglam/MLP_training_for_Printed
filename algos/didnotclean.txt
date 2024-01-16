@@ -1,0 +1,5 @@
+I (Gurol) did not edit decision_tree, logistic_regression, random_forest, svm.
+
+For these classes, I also removed 
+"dump(bmodel,"trained_models/" + self.name.split(".")[0] + "/" + self.name + "_" + str(self.hidden_layer_sizes) + "_acc" + str(accuracy) + "_clf.joblib")"
+from searchAndEvalClassifier function in Algo class. This should be added in those classes or introduced in some way.
