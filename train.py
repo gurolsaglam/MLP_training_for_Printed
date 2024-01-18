@@ -5,13 +5,17 @@
 import sys
 import os
 
+import torch
+
 # Python public packages
+import numpy as np
 import pandas as pd
 from joblib import dump
 
 # Our packages
 from datasets.read_datasets import Dataset
 from algos import *
+from algos_pytorch.mlp import MLP, Algo
 
 # from datasets.datasets import SportsActivities, MexDataPM, RealDispIdeal, MuscleActivity, ActPhysiological
 
@@ -36,11 +40,24 @@ if __name__ == "__main__":
     # print(dataset.Ytest)
 
     # rescale the input to the desired range.
-    dataset.rescale_features(feature_range)
+    # dataset.rescale_features(feature_range)
+    X_train, y_train = dataset.Xtrain.values, dataset.Ytrain
+    X_train, y_train = X_train.astype(np.float32), y_train.astype(np.int64)
 
+    X_test, y_test = dataset.Xtest.values, dataset.Ytest
+    X_test, y_test = X_test.astype(np.float32), y_test.astype(np.int64)
+
+    dim_input = X_train.shape[1]
+    dim_output = max(set(y_train)) + 1
     # choose the algorithm we want with the input parameter provided by the user.
     if algo_name in ['MLP']:
-        algo = MLP
+        net = MLP((dim_input, 10, 20, dim_output))
+        algo = Algo(net,
+                    X_train, X_test,
+                    y_train, y_test,
+                    'hi', task='classification',
+                    max_epochs=20)
+        # algo = MLP
     elif algo_name in ['DecisionTree']:
         algo = DecisionTree
     elif algo_name in ['RandomForest']:
@@ -50,7 +67,7 @@ if __name__ == "__main__":
     elif algo_name in ['LogReg']:
         algo = LogReg
     else:
-        assert (False)
+        assert False
 
     # check if the dump directory exists, create if not.
     trained_models = "trained_models/"
@@ -67,13 +84,33 @@ if __name__ == "__main__":
 
     # train the same algorithm 20 times.
     hidden_layer_sizes = 3
-    for i in range(0, 20):
+    for i in range(0, 1):
         # create the algorithm.
         name = dataset_name + "_" + str(feature_range) + "_" + str(hidden_layer_sizes) + "_" + str(i)
-        ml = algo(dataset.Xtrain, dataset.Xtest, dataset.Ytrain, dataset.Ytest, name,
-                  hidden_layer_sizes=hidden_layer_sizes)
+        # ml = algo(dataset.Xtrain, dataset.Xtest, dataset.Ytrain, dataset.Ytest, name,
+        #           hidden_layer_sizes=hidden_layer_sizes)
         # learn and evaluate the algorithm.
-        model, params, acc = ml.evalAlgo()
+        # param_dists = dict(
+        #     # activation = ['identity', 'logistic', 'tanh', 'relu'],
+        #     # solver = ['lbfgs', 'sgd', 'adam'],
+        #     optimizer__optimizer_cls=[torch.optim.lbfgs, torch.optim.sgd, torch.optim.adam],
+        #     learning_rate=['constant', 'invscaling', 'adaptive'],
+        #     momentum=uniform(0, 1),
+        #     nesterovs_momentum=[True, False],
+        #     validation_fraction=uniform(0, 1),
+        #     beta_1=uniform(0, 0.999),
+        #     beta_2=uniform(0, 0.999),
+        #     epsilon=uniform(0, 0.999)
+        # )
+        param_dists = {'lr': [0.05, 0.1],
+                       'module__topology': [(dim_input, int(dim_input*2/3)+dim_output, 10, dim_output),
+                                            (dim_input, int(dim_input*2/3)+dim_output, 20, dim_output),
+                                            (dim_input, int(dim_input*2/3)+dim_output, 50, 10, dim_output)],
+                       'optimizer': [torch.optim.LBFGS, torch.optim.SGD, torch.optim.Adam],
+                       # 'module__num_units': [10, 20],
+                       # 'module__dropout': [0, 0.5],
+                       }
+        model, params, acc = algo.evalAlgo(param_dists)
         # dump the information of the algorithm into a joblib file.
         dump(model, dataset_dump_folder + name + ".joblib")
         # append the result to the existing Excel sheet.
@@ -81,3 +118,4 @@ if __name__ == "__main__":
         df.loc[len(df.index)] = [dataset_name, algo_name, feature_range, hidden_layer_sizes, str(i),
                                  dataset_dump_folder + name, params, acc]
         df.to_excel(results_dump_file, index=False)
+        print(params, acc)
