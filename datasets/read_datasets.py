@@ -7,6 +7,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from tensorflow.keras.utils import to_categorical
+import numpy as np
 
 #Our packages
 #None for this script
@@ -58,8 +59,9 @@ class Dataset(object):
         le.fit(dataY)
         self.Ytrain = le.transform(self.Ytrain)
         self.Ytest = le.transform(self.Ytest)
-        self.Ytrain = to_categorical(self.Ytrain, num_classes=None)
-        self.Ytest = to_categorical(self.Ytest, num_classes=None)
+        #We had "to_categorical" in the old scripts, but removing this improves accuracy.
+        # self.Ytrain = to_categorical(self.Ytrain, num_classes=None)
+        # self.Ytest = to_categorical(self.Ytest, num_classes=None)
     
     def getXtrain():
         return self.Xtrain
@@ -77,6 +79,27 @@ class Dataset(object):
         Xall = np.concatenate((self.Xtrain, self.Xtest))
         scaler = MinMaxScaler(feature_range = feature_range)
         scaler.fit(Xall)
-        self.Xtest = scaler.transform(self.Xtest)
         self.Xtrain = scaler.transform(self.Xtrain)
+        self.Xtest = scaler.transform(self.Xtest)
         return self.Xtrain, self.Xtest
+    
+    def quantize_features(self, input_bitwidth):
+        Xall = np.concatenate((self.Xtrain, self.Xtest))
+        #get the new range, e.g. if input_bitwidth is 4, then new range will be (0,15), 15 included.
+        max_range = (2**input_bitwidth) - 1
+        new_feature_range = (0, np.max(Xall)*max_range)
+        scaler = MinMaxScaler(feature_range = new_feature_range)
+        scaler.fit(Xall)
+        self.Xtrain = scaler.transform(self.Xtrain)
+        self.Xtest = scaler.transform(self.Xtest)
+        #convert to integer to quantize, then divide by max resolution to get the values between 0 and 1, all quantized to number of bits.
+        self.Xtrain = np.rint(self.Xtrain)
+        self.Xtest = np.rint(self.Xtest)
+        self.Xtrain = np.divide(self.Xtrain, max_range+1)
+        self.Xtest = np.divide(self.Xtest, max_range+1)
+        return self.Xtrain, self.Xtest
+    
+    def binarize_labels(self):
+        #This function is more useful for QAT.
+        self.Ytrain = to_categorical(self.Ytrain, num_classes=None)
+        self.Ytest = to_categorical(self.Ytest, num_classes=None)
