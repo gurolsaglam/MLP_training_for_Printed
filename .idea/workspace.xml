@@ -6,13 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="ed8e638e-dec5-4638-bb6d-5f8a74c12a7f" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/algos/algo.py" beforeDir="false" afterPath="$PROJECT_DIR$/algos/algo.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/algos/mlp.py" beforeDir="false" afterPath="$PROJECT_DIR$/algos/mlp.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/train.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trained_models/MLP/arrhythmia/results_table.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/trained_models/MLP/arrhythmia/results_table.xlsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trained_models/MLP/balance_scale/balance_scale_(0, 1)_3_0.joblib" beforeDir="false" afterPath="$PROJECT_DIR$/trained_models/MLP/balance_scale/balance_scale_(0, 1)_3_0.joblib" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trained_models/MLP/balance_scale/balance_scale_(0, 1)_3_1.joblib" beforeDir="false" afterPath="$PROJECT_DIR$/trained_models/MLP/balance_scale/balance_scale_(0, 1)_3_1.joblib" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/trained_models/MLP/balance_scale/results_table.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/trained_models/MLP/balance_scale/results_table.xlsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
