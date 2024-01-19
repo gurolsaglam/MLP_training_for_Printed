@@ -10,39 +10,61 @@ from sklearn.dummy import DummyClassifier
 
 import numpy as np
 
+from joblib import dump
+
 
 class MLP(nn.Module):
-    def __init__(self, topology, activation='relu', max_iter=100):
+    def __init__(self, topology, activation='relu', max_iter=100, dropout=0):
         super(MLP, self).__init__()
         self.topology = topology
         self.max_iter = max_iter
         self.blocks = nn.ModuleList()
-        self.activation_block = F.relu if activation == 'relu' else F.tanh
+        self.activation_block = nn.ReLU()
 
         for i in range(len(topology)):
             self.blocks.append(nn.Linear(topology[i], topology[i + 1]))
+            if activation == 'identity':
+                self.blocks.append(nn.Identity())
+            elif activation == 'tanh':
+                self.blocks.append(nn.Tanh())
+            else:
+                self.blocks.append(nn.ReLU())
+            self.blocks.append(nn.Dropout(p=dropout))
             if (i + 1) == (len(topology) - 1):
                 break
 
-        self.model = nn.Sequential(self.blocks)
+        self.model = nn.Sequential(*self.blocks)
 
     def forward(self, x):
-        for block in self.blocks:
-            x = block(x)
-            x = self.activation_block(x)
+        x = self.model(x)
         out = F.softmax(x, dim=-1)
         return out
 
 
 class Algo:
-    def __init__(self, model, X_train, X_test, y_train, y_test, name, task, max_epochs):
+    def __init__(self, model,
+                 X_train, X_test,
+                 y_train, y_test,
+                 name,
+                 task,
+                 max_epochs,
+                 lr,
+                 optimizer,
+                 momentum,
+                 nesterov):
         self.model = NeuralNetClassifier(model,
                                          max_epochs=max_epochs,
-                                         lr=0.1,
+                                         lr=lr,
+                                         optimizer=optimizer,
+                                         optimizer__momentum=momentum,
+                                         optimizer__nesterov=nesterov
                                          ) if task == "classification" else \
             NeuralNetRegressor(model,
                                max_epochs=max_epochs,
-                               lr=0.1,
+                               lr=lr,
+                               optimizer=optimizer,
+                               optimizer__momentum=momentum,
+                               optimizer__nesterov=nesterov
                                )
         self.X_train = X_train
         self.X_test = X_test
@@ -55,46 +77,9 @@ class Algo:
     def evalAlgo(self, param_dists):
         model, params, accuracy = None, None, None
         if self.task == 'regression':
-            pass
-            # print("MLPRegressor Regressor w/ Random Parameter Search")
-            # mlprS = MLPRegressor(hidden_layer_sizes=self.hidden_layer_sizes, max_iter=self.max_iter)
-            # param_dists = dict(
-            # #activation = ['identity', 'logistic', 'tanh', 'relu'],
-            # solver = ['lbfgs', 'sgd', 'adam'],
-            # learning_rate = ['constant', 'invscaling', 'adaptive'],
-            # momentum = uniform(0,1),
-            # nesterovs_momentum = [True, False],
-            # validation_fraction = uniform(0,1),
-            # beta_1 = uniform(0,0.999),
-            # beta_2 = uniform(0,0.999),
-            # epsilon = uniform(0,0.999)
-            # )
-            # bmodel=self.searchAndEvalRegressor(mlprS,param_dists)
-            # print('**** Regressor ****')
-            # #print('weights: ', bmodel.coefs_)
-            # #print('intercepts: ', bmodel.intercepts_)
-            # #print('act: ', bmodel.activation)
-            # #print('outact: ', bmodel.out_activation_)
+            model, params, accuracy = self.searchAndEvalRegressor(param_dists)
 
-            # print("")
-            # print("MLPRegressor w/o Random Parameter Search")
-            # mlpr0 = MLPRegressor(hidden_layer_sizes=self.hidden_layer_sizes, max_iter=self.max_iter)
-            # self.evalRegressor(mlpr0)
-
-            # print("")
         elif self.task == 'classification':
-            # param_dists = dict(
-            #     # activation = ['identity', 'logistic', 'tanh', 'relu'],
-            #     solver=['lbfgs', 'sgd', 'adam'],
-            #     learning_rate=['constant', 'invscaling', 'adaptive'],
-            #     momentum=uniform(0, 1),
-            #     nesterovs_momentum=[True, False],
-            #     validation_fraction=uniform(0, 1),
-            #     beta_1=uniform(0, 0.999),
-            #     beta_2=uniform(0, 0.999),
-            #     epsilon=uniform(0, 0.999)
-            # )
-
             model, params, accuracy = self.searchAndEvalClassifier(param_dists)
 
         return model, params, accuracy
@@ -123,23 +108,44 @@ class Algo:
 
     def searchAndEvalClassifier(self, param_dists):
         # gs = RandomizedSearchCV(self.model, param_dists, random_state=0, cv=5, n_iter=600, n_jobs=self.nJobs)
-        # gs = RandomizedSearchCV(self.model, param_dists, random_state=0, cv=5, n_iter=600)
-        gs = GridSearchCV(self.model, param_dists, scoring='f1_micro', cv=3)
+        gs = RandomizedSearchCV(self.model, param_dists, random_state=0, cv=3, n_iter=600)
+        # gs = GridSearchCV(self.model, param_dists, scoring='f1_micro', cv=3)
         # classifier = GridSearchCV(dt, param_dists, scoring='f1_micro', cv=5)
 
         gs.fit(self.X_train, self.y_train)
         print('------------ Best -------------')
         print(gs.best_score_, gs.best_params_)
         bmodel = gs.best_estimator_
+        pred = bmodel.predict(self.X_test)
+        accuracy = accuracy_score(pred, self.y_test)
 
         dummy = DummyClassifier(strategy='most_frequent').fit(self.X_train, self.y_train)
         print("Baseline_Accuracy: {}".format(accuracy_score(dummy.predict(self.X_test), self.y_test)))
         # print('**** Classifier ****')
 
-        pred = bmodel.predict(self.X_test)
-        accuracy = accuracy_score(pred, self.y_test)
         print("accuracy score: ", accuracy)
         return bmodel, gs.best_params_, accuracy
+
+    def searchAndEvalRegressor(self, param_dists):
+        # gs = RandomizedSearchCV(self.model, param_dists, random_state=0, cv=5, n_iter=500, n_jobs=self.nJobs)
+        gs = RandomizedSearchCV(self.model, param_dists, random_state=0, cv=3, n_iter=600)
+        gs.fit(self.X_train, self.y_train)
+        print("best parameters found: ", gs.best_params_)
+        pred = gs.predict(self.X_test)
+        print("mean squared error: ", mean_squared_error(pred, self.y_test))
+        # self.reg_to_class(pred)
+        # print('**** Regressor ****')
+        bmodel = gs.best_estimator_
+        # print('weights: ', bmodel.coefs_)
+        # print('intercepts: ', bmodel.intercepts_)
+        # print('act: ', bmodel.activation)
+        # print('outact: ', bmodel.out_activation_)
+        dump(bmodel, self.name + '_reg.joblib')
+        # print("####")
+        # pred=bmodel.predict(self.X_test)
+        # self.reg_to_class(pred)
+        # print("####")
+        return bmodel
 
 
 if __name__ == '__main__':
