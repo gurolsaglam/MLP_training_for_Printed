@@ -59,14 +59,8 @@ class Dataset(object):
         dataY = pd.concat([self.Ytrain, self.Ytest])
         le = LabelEncoder()
         le.fit(dataY)
-<<<<<<< HEAD
         self.Ytrain = le.transform(self.Ytrain)
         self.Ytest = le.transform(self.Ytest)
-=======
-        self.Ytrain = pd.Series(le.transform(self.Ytrain))
-        self.Ytest = pd.Series(le.transform(self.Ytest))
-        #We had "to_categorical" in the old scripts, but removing this improves accuracy.
->>>>>>> 7d18a966b4058d8fbe182d3df66a2fc9057d6bb4
         # self.Ytrain = to_categorical(self.Ytrain, num_classes=None)
         # self.Ytest = to_categorical(self.Ytest, num_classes=None)
 
@@ -86,35 +80,6 @@ class Dataset(object):
         Xall = np.concatenate((self.Xtrain, self.Xtest))
         scaler = MinMaxScaler(feature_range=feature_range)
         scaler.fit(Xall)
-<<<<<<< HEAD
         self.Xtest = scaler.transform(self.Xtest)
         self.Xtrain = scaler.transform(self.Xtrain)
         return self.Xtrain, self.Xtest
-=======
-        self.Xtrain = pd.DataFrame(scaler.transform(self.Xtrain.values), columns = self.Xtrain.columns)
-        self.Xtest = pd.DataFrame(scaler.transform(self.Xtest.values), columns = self.Xtest.columns)
-        return self.Xtrain, self.Xtest
-    
-    def quantize_features(self, input_bitwidth):
-        Xall = np.concatenate((self.Xtrain, self.Xtest))
-        #get the new range, e.g. if input_bitwidth is 4, then new range will be (0,15), 15 included.
-        max_range = (2**input_bitwidth) - 1
-        new_feature_range = (0, np.max(Xall)*max_range)
-        scaler = MinMaxScaler(feature_range = new_feature_range)
-        scaler.fit(Xall)
-        self.Xtrain = pd.DataFrame(scaler.transform(self.Xtrain.values), columns = self.Xtrain.columns)
-        self.Xtest = pd.DataFrame(scaler.transform(self.Xtest.values), columns = self.Xtest.columns)
-        #convert to integer to quantize, then divide by max resolution to get the values between 0 and 1, all quantized to number of bits.
-        self.Xtrain = np.rint(self.Xtrain)
-        self.Xtest = np.rint(self.Xtest)
-        self.Xtrain = np.divide(self.Xtrain, max_range+1)
-        self.Xtest = np.divide(self.Xtest, max_range+1)
-        return self.Xtrain, self.Xtest
-    
-    def binarize_labels(self):
-        #This function is more useful for QAT.
-        dataY = pd.concat([self.Ytrain, self.Ytest])
-        dataY = to_categorical(dataY, num_classes=None)
-        self.Ytrain = dataY[0:self.Ytrain.shape[0],:]
-        self.Ytest = dataY[self.Ytrain.shape[0]:,:]
->>>>>>> 7d18a966b4058d8fbe182d3df66a2fc9057d6bb4
