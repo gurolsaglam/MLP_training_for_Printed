@@ -37,6 +37,11 @@ if __name__ == "__main__":
     #rescale the input to the desired range.
     dataset.rescale_features(feature_range)
     
+    #modify the labels into binary vector form from integer vector (one-hot coding). (do this only if the dataset has 2 unique labels.
+    dataY = pd.concat([dataset.Ytrain, dataset.Ytest])
+    if (len(dataY.unique()) == 2):
+        dataset.binarize_labels()
+    
     #choose the algorithm we want with the input parameter provided by the user.
     if algo_name in ['MLP']:
         algo = MLP

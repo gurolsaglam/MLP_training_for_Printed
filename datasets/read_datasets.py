@@ -57,8 +57,8 @@ class Dataset(object):
         dataY = pd.concat([self.Ytrain, self.Ytest])
         le = LabelEncoder()
         le.fit(dataY)
-        self.Ytrain = le.transform(self.Ytrain)
-        self.Ytest = le.transform(self.Ytest)
+        self.Ytrain = pd.Series(le.transform(self.Ytrain))
+        self.Ytest = pd.Series(le.transform(self.Ytest))
         #We had "to_categorical" in the old scripts, but removing this improves accuracy.
         # self.Ytrain = to_categorical(self.Ytrain, num_classes=None)
         # self.Ytest = to_categorical(self.Ytest, num_classes=None)
@@ -79,8 +79,8 @@ class Dataset(object):
         Xall = np.concatenate((self.Xtrain, self.Xtest))
         scaler = MinMaxScaler(feature_range = feature_range)
         scaler.fit(Xall)
-        self.Xtrain = scaler.transform(self.Xtrain)
-        self.Xtest = scaler.transform(self.Xtest)
+        self.Xtrain = pd.DataFrame(scaler.transform(self.Xtrain.values), columns = self.Xtrain.columns)
+        self.Xtest = pd.DataFrame(scaler.transform(self.Xtest.values), columns = self.Xtest.columns)
         return self.Xtrain, self.Xtest
     
     def quantize_features(self, input_bitwidth):
@@ -90,8 +90,8 @@ class Dataset(object):
         new_feature_range = (0, np.max(Xall)*max_range)
         scaler = MinMaxScaler(feature_range = new_feature_range)
         scaler.fit(Xall)
-        self.Xtrain = scaler.transform(self.Xtrain)
-        self.Xtest = scaler.transform(self.Xtest)
+        self.Xtrain = pd.DataFrame(scaler.transform(self.Xtrain.values), columns = self.Xtrain.columns)
+        self.Xtest = pd.DataFrame(scaler.transform(self.Xtest.values), columns = self.Xtest.columns)
         #convert to integer to quantize, then divide by max resolution to get the values between 0 and 1, all quantized to number of bits.
         self.Xtrain = np.rint(self.Xtrain)
         self.Xtest = np.rint(self.Xtest)
@@ -101,5 +101,7 @@ class Dataset(object):
     
     def binarize_labels(self):
         #This function is more useful for QAT.
-        self.Ytrain = to_categorical(self.Ytrain, num_classes=None)
-        self.Ytest = to_categorical(self.Ytest, num_classes=None)
+        dataY = pd.concat([self.Ytrain, self.Ytest])
+        dataY = to_categorical(dataY, num_classes=None)
+        self.Ytrain = dataY[0:self.Ytrain.shape[0],:]
+        self.Ytest = dataY[self.Ytrain.shape[0]:,:]
