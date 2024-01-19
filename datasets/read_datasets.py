@@ -6,7 +6,7 @@ import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
-# from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 import numpy as np
 
 # Our packages
@@ -59,14 +59,11 @@ class Dataset(object):
         dataY = pd.concat([self.Ytrain, self.Ytest])
         le = LabelEncoder()
         le.fit(dataY)
-<<<<<<< HEAD
         self.Ytrain = le.transform(self.Ytrain)
         self.Ytest = le.transform(self.Ytest)
-=======
         self.Ytrain = pd.Series(le.transform(self.Ytrain))
         self.Ytest = pd.Series(le.transform(self.Ytest))
         #We had "to_categorical" in the old scripts, but removing this improves accuracy.
->>>>>>> 7d18a966b4058d8fbe182d3df66a2fc9057d6bb4
         # self.Ytrain = to_categorical(self.Ytrain, num_classes=None)
         # self.Ytest = to_categorical(self.Ytest, num_classes=None)
 
@@ -86,11 +83,9 @@ class Dataset(object):
         Xall = np.concatenate((self.Xtrain, self.Xtest))
         scaler = MinMaxScaler(feature_range=feature_range)
         scaler.fit(Xall)
-<<<<<<< HEAD
         self.Xtest = scaler.transform(self.Xtest)
         self.Xtrain = scaler.transform(self.Xtrain)
         return self.Xtrain, self.Xtest
-=======
         self.Xtrain = pd.DataFrame(scaler.transform(self.Xtrain.values), columns = self.Xtrain.columns)
         self.Xtest = pd.DataFrame(scaler.transform(self.Xtest.values), columns = self.Xtest.columns)
         return self.Xtrain, self.Xtest
@@ -117,4 +112,3 @@ class Dataset(object):
         dataY = to_categorical(dataY, num_classes=None)
         self.Ytrain = dataY[0:self.Ytrain.shape[0],:]
         self.Ytest = dataY[self.Ytrain.shape[0]:,:]
->>>>>>> 7d18a966b4058d8fbe182d3df66a2fc9057d6bb4
