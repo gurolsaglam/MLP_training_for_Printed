@@ -24,20 +24,25 @@ if __name__ == "__main__":
     dataset_name = sys.argv[1]
     algo_name = sys.argv[2]
     feature_range = (int(sys.argv[3].split(",")[0]), int(sys.argv[3].split(",")[1]))
-
+    
     # create the Dataset object for the specific dataset. csv_separator is "," by default in the parameters,
     # but it is also explicitly given here for the case that the user needs to change it to some other separator.
     dataset = Dataset(dataset_name, csv_separator=",")
-
+    
     # the dataset is already divided into train and test subsets. Labels are already in unique & categorical format.
     # print(dataset.Xtrain)
     # print(dataset.Ytrain)
     # print(dataset.Xtest)
     # print(dataset.Ytest)
-
+    
     # rescale the input to the desired range.
     dataset.rescale_features(feature_range)
-
+    
+    # modify the labels into binary vector form from integer vector (one-hot coding). (do this only if the dataset has 2 unique labels.
+    dataY = pd.concat([dataset.Ytrain, dataset.Ytest])
+    if (len(dataY.unique()) == 2):
+        dataset.binarize_labels()
+    
     # choose the algorithm we want with the input parameter provided by the user.
     if algo_name in ['MLP']:
         algo = MLP
@@ -50,21 +55,20 @@ if __name__ == "__main__":
     elif algo_name in ['LogReg']:
         algo = LogReg
     else:
-        assert (False)
-
+        assert(False)
+    
     # check if the dump directory exists, create if not.
     trained_models = "trained_models/"
     algorithm_dump_folder = trained_models + algo_name + "/"
     dataset_dump_folder = algorithm_dump_folder + dataset_name + "/"
     results_dump_file = dataset_dump_folder + "results_table.xlsx"
-    if not os.path.exists(dataset_dump_folder):
+    if (not os.path.exists(dataset_dump_folder)):
         os.makedirs(dataset_dump_folder)
         # also add an Excel sheet for result dumping.
-        df = pd.DataFrame(
-            columns=["dataset", "algo", "feature_range", "hidden_layer_sizes", "index", "joblib_filename", "params",
-                     "accuracy"])
+        df = pd.DataFrame(columns=["dataset", "algo", "feature_range", "hidden_layer_sizes",
+                                   "index", "joblib_filename", "params", "accuracy"])
         df.to_excel(results_dump_file, index=False)
-
+    
     # train the same algorithm 20 times.
     hidden_layer_sizes = 3
     for i in range(0, 20):

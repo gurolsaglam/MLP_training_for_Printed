@@ -78,8 +78,31 @@ class Dataset(object):
 
     def rescale_features(self, feature_range):
         Xall = np.concatenate((self.Xtrain, self.Xtest))
-        scaler = MinMaxScaler(feature_range=feature_range)
+        scaler = MinMaxScaler(feature_range = feature_range)
         scaler.fit(Xall)
-        self.Xtest = scaler.transform(self.Xtest)
-        self.Xtrain = scaler.transform(self.Xtrain)
+        self.Xtrain = pd.DataFrame(scaler.transform(self.Xtrain.values), columns = self.Xtrain.columns)
+        self.Xtest = pd.DataFrame(scaler.transform(self.Xtest.values), columns = self.Xtest.columns)
         return self.Xtrain, self.Xtest
+    
+    def quantize_features(self, input_bitwidth):
+        Xall = np.concatenate((self.Xtrain, self.Xtest))
+        # get the new range, e.g. if input_bitwidth is 4, then new range will be (0,15), 15 included.
+        max_range = (2**input_bitwidth) - 1
+        new_feature_range = (0, np.max(Xall)*max_range)
+        scaler = MinMaxScaler(feature_range = new_feature_range)
+        scaler.fit(Xall)
+        self.Xtrain = pd.DataFrame(scaler.transform(self.Xtrain.values), columns = self.Xtrain.columns)
+        self.Xtest = pd.DataFrame(scaler.transform(self.Xtest.values), columns = self.Xtest.columns)
+        # convert to integer to quantize, then divide by max resolution to get the values between 0 and 1, all quantized to number of bits.
+        self.Xtrain = np.rint(self.Xtrain)
+        self.Xtest = np.rint(self.Xtest)
+        self.Xtrain = np.divide(self.Xtrain, max_range+1)
+        self.Xtest = np.divide(self.Xtest, max_range+1)
+        return self.Xtrain, self.Xtest
+    
+    def binarize_labels(self):
+        # This function is more useful for QAT.
+        dataY = pd.concat([self.Ytrain, self.Ytest])
+        dataY = to_categorical(dataY, num_classes=None)
+        self.Ytrain = dataY[0:self.Ytrain.shape[0],:]
+        self.Ytest = dataY[self.Ytrain.shape[0]:,:]
