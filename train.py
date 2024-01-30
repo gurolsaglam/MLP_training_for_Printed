@@ -69,7 +69,7 @@ if __name__ == "__main__":
                     lr=0.1,
                     optimizer=torch.optim.Adam,
                     momentum=1,
-                    nesterov=True,)
+                    nesterov=True, )
         # algo = MLP
     elif algo_name in ['DecisionTree']:
         algo = DecisionTree
@@ -115,6 +115,7 @@ if __name__ == "__main__":
                        }
         model, params, acc = algo.evalAlgo(param_dists)
         # dump the information of the algorithm into a joblib file.
+        # ?? joblib / .pkl
         dump(model, dataset_dump_folder + name + ".joblib")
         # append the result to the existing Excel sheet.
         df = pd.read_excel(results_dump_file)

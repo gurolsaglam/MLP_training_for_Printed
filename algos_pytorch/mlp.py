@@ -32,6 +32,7 @@ class MLP(nn.Module):
             self.blocks.append(nn.Dropout(p=dropout))
             if (i + 1) == (len(topology) - 1):
                 break
+        self.blocks.append(nn.ReLU())
 
         self.model = nn.Sequential(*self.blocks)
 

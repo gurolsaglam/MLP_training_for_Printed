@@ -8,6 +8,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 # from tensorflow.keras.utils import to_categorical
 import numpy as np
+from sklearn.feature_selection import mutual_info_classif
+import matplotlib.pyplot as plt
+import pandas as pd
+import random
 
 # Our packages
 # None for this script
@@ -49,11 +53,20 @@ class Dataset(object):
         # read the subsets and parse to the fields.
         data_train = pd.read_csv(data_train_file, sep=csv_separator)
         data_test = pd.read_csv(data_test_file, sep=csv_separator)
-
+        
+        
         self.Ytrain = data_train["Y"]
         self.Xtrain = data_train.drop("Y", axis=1)
         self.Ytest = data_test["Y"]
         self.Xtest = data_test.drop("Y", axis=1)
+        
+        if fname == "arrhythmia":
+            dataset = pd.concat([data_train, data_test])
+            selected_features = self.select_features(dataset)
+            self.Xtrain = data_train[selected_features]
+            self.Xtest = data_test[selected_features]
+            
+        
 
         # with LabelEncoder, relabel samples to categorical.
         dataY = pd.concat([self.Ytrain, self.Ytest])
@@ -63,6 +76,80 @@ class Dataset(object):
         self.Ytest = le.transform(self.Ytest)
         # self.Ytrain = to_categorical(self.Ytrain, num_classes=None)
         # self.Ytest = to_categorical(self.Ytest, num_classes=None)
+    
+    def plot_score(self, score):
+        plt.figure(figsize=(16,8))
+        plt.plot(score)
+        plt.xlabel('# of feature')
+        plt.ylabel('score')
+        plt.show()
+        
+    def add_max_score_to_list(self, temp_scores, current_score, selected_indices, selected_indices_list):
+        max_score_index = np.argmax(np.array(temp_scores))
+        current_score.append(temp_scores[max_score_index])
+        selected_indices.add(max_score_index)
+        selected_indices_list.append(max_score_index)
+    
+    def select_features(self, data):
+        Ytrain = data["Y"]
+        Xtrain = data.drop("Y", axis=1)
+        
+        X = Xtrain
+        y = Ytrain
+        y = pd.Series(y, name='y')
+        data = pd.concat([X, y], axis=1)
+        # Correlation Matrix
+        corr = data.corr()
+        corr_ = corr.iloc[:,-1]
+
+        boolean_array = (corr_ > 0.05).to_numpy()
+        selected_indices = np.argwhere(corr_ > 0.05)[:-1, -1]
+        features = X.columns
+        # selected_features = features[selected_indices]
+        selected_features = []
+
+        for i in range(len(boolean_array[:-1])):
+            if boolean_array[i] == False:
+                X = X.drop(features[i], axis=1)
+                
+        num_features = len(X.columns)
+        features = X.columns
+        
+        start_feature_index = random.randint(0, num_features-1)
+        selected_indices = set()
+        selected_indices_list = []
+
+        selected_indices.add(start_feature_index)
+        selected_indices_list.append(start_feature_index)
+
+        mi_scores = [mutual_info_classif(X.to_numpy()[:,i].reshape(-1,1), y) for i in range(num_features)]
+        mi_score_matrix = np.zeros((num_features, num_features))
+        current_score = []
+        
+        k = 40
+        for _ in range(k-1):
+            temp_scores = []
+            for i in range(num_features):
+                if i in selected_indices:
+                    temp_scores.append(-float('inf'))
+                else:
+                    score = mi_scores[i][0]
+                    diff = 0
+                    for j in selected_indices:
+                        if j > i:
+                            if mi_score_matrix[i][j] == 0:
+                                mi_score_matrix[i][j] = np.corrcoef(X.iloc[:,i], X.iloc[:,j])[0, 1]
+                            diff += mi_score_matrix[i][j]
+                        else:
+                            if mi_score_matrix[j][i] == 0:
+                                mi_score_matrix[j][i] = np.corrcoef(X.iloc[:,i], X.iloc[:,j])[0, 1]
+                            diff += mi_score_matrix[j][i]
+                    temp_scores.append(score - diff/len(selected_indices))
+            self.add_max_score_to_list(temp_scores, current_score, selected_indices, selected_indices_list)
+        # self.plot_score(current_score) 
+        return features[selected_indices_list]
+    
+        
 
     def getXtrain(self):
         return self.Xtrain
