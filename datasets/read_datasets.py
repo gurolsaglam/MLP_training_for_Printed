@@ -6,7 +6,7 @@ import os
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
-# from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 import numpy as np
 from sklearn.feature_selection import mutual_info_classif
 import matplotlib.pyplot as plt
@@ -36,7 +36,17 @@ class Dataset(object):
             if len(os.listdir(BASE_DIR + "data_raw/" + fname + "/")) == 1:
                 data_raw_file = BASE_DIR + "data_raw/" + fname + "/" + fname + ".csv"
                 data = pd.read_csv(data_raw_file, sep=csv_separator)
-                data_train, data_test = train_test_split(data, test_size=(1 - DIVISION_PERCENTAGE), random_state=42)
+                # splitting the dataset without caring about the labels sometimes put all samples of a certain label into the testing dataset, thus the network not learning anything for that label.
+                # so we split the dataset label by label.
+                # data_train, data_test = train_test_split(data, test_size=(1 - DIVISION_PERCENTAGE), random_state=42) #OLD LINE
+                labels = data["Y"].unique()
+                data_train = pd.DataFrame()
+                data_test = pd.DataFrame()
+                for label in labels:
+                    tempdata = data[data["Y"] == label]
+                    temp_train, temp_test = train_test_split(tempdata, test_size=(1 - DIVISION_PERCENTAGE), random_state=42)
+                    data_train = pd.concat([data_train, temp_train])
+                    data_test = pd.concat([data_test, temp_test])
             else:
                 data_raw_train_file = BASE_DIR + "data_raw/" + fname + "/" + fname + "_train.csv"
                 data_raw_test_file = BASE_DIR + "data_raw/" + fname + "/" + fname + "_test.csv"
@@ -54,7 +64,6 @@ class Dataset(object):
         data_train = pd.read_csv(data_train_file, sep=csv_separator)
         data_test = pd.read_csv(data_test_file, sep=csv_separator)
         
-        
         self.Ytrain = data_train["Y"]
         self.Xtrain = data_train.drop("Y", axis=1)
         self.Ytest = data_test["Y"]
@@ -65,8 +74,6 @@ class Dataset(object):
             selected_features = self.select_features(dataset)
             self.Xtrain = data_train[selected_features]
             self.Xtest = data_test[selected_features]
-            
-        
 
         # with LabelEncoder, relabel samples to categorical.
         dataY = pd.concat([self.Ytrain, self.Ytest])
@@ -76,6 +83,8 @@ class Dataset(object):
         self.Ytest = le.transform(self.Ytest)
         # self.Ytrain = to_categorical(self.Ytrain, num_classes=None)
         # self.Ytest = to_categorical(self.Ytest, num_classes=None)
+        self.Ytrain = pd.DataFrame(self.Ytrain, columns = ["Y"])
+        self.Ytest = pd.DataFrame(self.Ytest, columns = ["Y"])
     
     def plot_score(self, score):
         plt.figure(figsize=(16,8))
