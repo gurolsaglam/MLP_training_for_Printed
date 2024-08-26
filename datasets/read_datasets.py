@@ -69,11 +69,11 @@ class Dataset(object):
         self.Ytest = data_test["Y"]
         self.Xtest = data_test.drop("Y", axis=1)
         
-        if fname == "arrhythmia":
-            dataset = pd.concat([data_train, data_test])
-            selected_features = self.select_features(dataset)
-            self.Xtrain = data_train[selected_features]
-            self.Xtest = data_test[selected_features]
+        # if fname == "arrhythmia":
+            # dataset = pd.concat([data_train, data_test])
+            # selected_features = self.select_features(dataset)
+            # self.Xtrain = data_train[selected_features]
+            # self.Xtest = data_test[selected_features]
 
         # with LabelEncoder, relabel samples to categorical.
         dataY = pd.concat([self.Ytrain, self.Ytest])
@@ -85,6 +85,18 @@ class Dataset(object):
         # self.Ytest = to_categorical(self.Ytest, num_classes=None)
         self.Ytrain = pd.DataFrame(self.Ytrain, columns = ["Y"])
         self.Ytest = pd.DataFrame(self.Ytest, columns = ["Y"])
+    
+    def getXtrain(self):
+        return self.Xtrain
+    
+    def getYtrain(self):
+        return self.Ytrain
+    
+    def getXtest(self):
+        return self.Xtest
+    
+    def getYtest(self):
+        return self.Ytest
     
     def plot_score(self, score):
         plt.figure(figsize=(16,8))
@@ -158,29 +170,16 @@ class Dataset(object):
         # self.plot_score(current_score) 
         return features[selected_indices_list]
     
-        
-
-    def getXtrain(self):
-        return self.Xtrain
-
-    def getYtrain(self):
-        return self.Ytrain
-
-    def getXtest(self):
-        return self.Xtest
-
-    def getYtest(self):
-        return self.Ytest
-
-    def rescale_features(self, feature_range):
-        Xall = np.concatenate((self.Xtrain, self.Xtest))
+    
+    def rescale_features(self, feature_range=(0,1)):
+        Xall = pd.concat([self.Xtrain, self.Xtest])
         scaler = MinMaxScaler(feature_range = feature_range)
-        scaler.fit(Xall)
+        scaler.fit(Xall.values)
         self.Xtrain = pd.DataFrame(scaler.transform(self.Xtrain.values), columns = self.Xtrain.columns)
         self.Xtest = pd.DataFrame(scaler.transform(self.Xtest.values), columns = self.Xtest.columns)
         return self.Xtrain, self.Xtest
     
-    def quantize_features(self, input_bitwidth):
+    def quantize_features(self, input_bitwidth=4):
         Xall = np.concatenate((self.Xtrain, self.Xtest))
         # get the new range, e.g. if input_bitwidth is 4, then new range will be (0,15), 15 included.
         max_range = (2**input_bitwidth) - 1
@@ -194,6 +193,26 @@ class Dataset(object):
         self.Xtest = np.rint(self.Xtest)
         self.Xtrain = np.divide(self.Xtrain, max_range+1)
         self.Xtest = np.divide(self.Xtest, max_range+1)
+        return self.Xtrain, self.Xtest
+    
+    def bitseparate_features(self, input_bitwidth=4):
+        # get the max range from input_bitwidth which by default is 4 bits, multiply the quantized features (they have to be quantized using quantize_features method.
+        max_range = (2**input_bitwidth)
+        self.Xtrain = np.multiply(self.Xtrain, max_range)
+        self.Xtest = np.multiply(self.Xtest, max_range)
+        # now separate each feature into their bits
+        dfTrainTemp = pd.DataFrame()
+        dfTestTemp = pd.DataFrame()
+        for column in self.Xtrain.columns.values:
+            cols = []
+            for i in range(input_bitwidth-1,-1,-1):
+                cols.append(column + str(i))
+            column_values = self.Xtrain[column].astype(int).values
+            dfTrainTemp[cols] = pd.DataFrame((((column_values[:,None] & ((2**(input_bitwidth-1)) >> np.arange(input_bitwidth)))) > 0).astype(int))
+            column_values = self.Xtest[column].astype(int).values
+            dfTestTemp[cols] = pd.DataFrame((((column_values[:,None] & ((2**(input_bitwidth-1)) >> np.arange(input_bitwidth)))) > 0).astype(int))
+        self.Xtrain = dfTrainTemp
+        self.Xtest = dfTestTemp
         return self.Xtrain, self.Xtest
     
     def binarize_labels(self):
