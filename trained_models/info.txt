@@ -1,0 +1,17 @@
+The MLPs here are configured with the parameter distribution:
+
+param_dists = {'lr': uniform(0.001, 0.1),
+                   'module__topology': [(dim_input, hidden_layer_sizes, dim_output),
+                                        # (dim_input, 64, 32, dim_output),
+                                        # (dim_input, 64, 32, 16, dim_output),
+                                        ],
+                   # 'module__activation': ['identity', 'tanh', 'relu'],
+                   'module__activation': ['relu'],
+                   'module__dropout': uniform(0, 0),
+                   'optimizer': [torch.optim.LBFGS, torch.optim.SGD, torch.optim.Adam],
+                   'optimizer__momentum': uniform(0, 1),
+                   'optimizer__nesterov': [False, True],
+                   # 'optimizer__beta_1': np.linspace(0.8, 0.99, 5),  # Sample 5 values between 0.8 and 0.99
+                   # 'optimizer__beta_2': np.linspace(0.9, 0.999, 5)  # Sample 5 values between 0.9 and 0.999
+                   # 'optimizer__eps ': uniform(0, 0.999),
+                   }

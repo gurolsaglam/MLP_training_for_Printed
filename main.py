@@ -4,18 +4,15 @@
 # Python native libraries
 import sys
 import os
-from scipy.stats import reciprocal, uniform, expon
-
-import torch
+from joblib import dump
 
 # Python public packages
 import numpy as np
 import pandas as pd
-from joblib import dump
+from scipy.stats import reciprocal, uniform, expon
+import torch
 
 # Our packages
-from sklearn.preprocessing import StandardScaler
-
 from datasets.read_datasets import Dataset
 from algos import *
 from algos_pytorch.mlp import MLP, Algo
@@ -43,42 +40,33 @@ if __name__ == "__main__":
     # print(dataset.Ytest)
 
     # rescale the input to the desired range.
-    # dataset.rescale_features(feature_range)
-    scaler = StandardScaler()
-
-    X_train, y_train = dataset.Xtrain.values, dataset.Ytrain
-    X_train, y_train = X_train.astype(np.float32), y_train.astype(np.int64)
-    scaler.fit(X_train)
-    X_train = scaler.transform(X_train)
-
-    X_test, y_test = dataset.Xtest.values, dataset.Ytest
-    X_test, y_test = X_test.astype(np.float32), y_test.astype(np.int64)
-    X_test = scaler.transform(X_test)
-
-    dim_input = X_train.shape[1]
-    dim_output = max(set(y_train)) + 1
+    dataset.rescale_features(feature_range)
+    
+    Xtrain, Ytrain = dataset.Xtrain.values, np.transpose(dataset.Ytrain.values)[0]
+    Xtrain, Ytrain = Xtrain.astype(np.float32), Ytrain.astype(np.int64)
+    Xtest, Ytest = dataset.Xtest.values, np.transpose(dataset.Ytest.values)[0]
+    Xtest, Ytest = Xtest.astype(np.float32), Ytest.astype(np.int64)
+    
+    dim_input = Xtrain.shape[1]
+    hidden_layer_sizes = 3
+    dim_output = len(np.unique(Ytrain))
+    
     # choose the algorithm we want with the input parameter provided by the user.
     if algo_name in ['MLP']:
-        net = MLP(topology=(dim_input, 10, 20, dim_output),
-                  )
+        net = MLP(topology=(dim_input, hidden_layer_sizes, dim_output),)
+        device = torch.device("cuda")
+        torch.manual_seed(42)
+        net.to(device)
         algo = Algo(net,
-                    X_train, X_test,
-                    y_train, y_test,
+                    Xtrain, Xtest,
+                    Ytrain, Ytest,
                     'hi', task='classification',
-                    max_epochs=20,
+                    max_epochs=100,
                     lr=0.1,
                     optimizer=torch.optim.Adam,
                     momentum=1,
-                    nesterov=True, )
-        # algo = MLP
-    elif algo_name in ['DecisionTree']:
-        algo = DecisionTree
-    elif algo_name in ['RandomForest']:
-        algo = RandomForest
-    elif algo_name in ['SVM']:
-        algo = SVM
-    elif algo_name in ['LogReg']:
-        algo = LogReg
+                    nesterov=True, 
+                    )
     else:
         assert False
 
@@ -95,31 +83,42 @@ if __name__ == "__main__":
                      "accuracy"])
         df.to_excel(results_dump_file, index=False)
 
-    # train the same algorithm 20 times.
+    # train the same algorithm 20 times. Arbitrary number, choose however many you might require.
     hidden_layer_sizes = 3
-    for i in range(0, 1):
+    number_of_models = 20
+    
+    names = []
+    joblib_filenames = []
+    for i in range(0, number_of_models):
+        names.append(dataset_name + "_" + str(feature_range) + "_" + str(hidden_layer_sizes) + "_" + str(i))
+        joblib_filenames.append(dataset_dump_folder + dataset_name + "_" + str(feature_range) + "_" + str(hidden_layer_sizes) + "_" + str(i))
+    param_dists = {'lr': uniform(0.001, 0.1),
+                   'module__topology': [(dim_input, hidden_layer_sizes, dim_output),
+                                        # (dim_input, 64, 32, dim_output),
+                                        # (dim_input, 64, 32, 16, dim_output),
+                                        ],
+                   # 'module__activation': ['identity', 'tanh', 'relu'],
+                   'module__activation': ['relu'],
+                   'module__dropout': uniform(0, 0.5),
+                   'optimizer': [torch.optim.LBFGS, torch.optim.SGD, torch.optim.Adam],
+                   'optimizer__momentum': uniform(0, 1),
+                   'optimizer__nesterov': [False, True],
+                   # 'optimizer__beta_1': np.linspace(0.8, 0.99, 5),  # Sample 5 values between 0.8 and 0.99
+                   # 'optimizer__beta_2': np.linspace(0.9, 0.999, 5)  # Sample 5 values between 0.9 and 0.999
+                   # 'optimizer__eps ': uniform(0, 0.999),
+                   }
+    
+    
+    for i in range(0, number_of_models):
         # create the algorithm.
-        name = dataset_name + "_" + str(feature_range) + "_" + str(hidden_layer_sizes) + "_" + str(i)
-        param_dists = {'lr': uniform(0.001, 0.1),
-                       'module__topology': [(dim_input, 64, dim_output),
-                                            (dim_input, 64, 32, dim_output),
-                                            (dim_input, 64, 32, 16, dim_output)],
-                       'module__activation': ['identity', 'tanh', 'relu'],
-                       'module__dropout': uniform(0, 0.5),
-                       'optimizer': [torch.optim.LBFGS, torch.optim.SGD, torch.optim.Adam],
-                       'optimizer__momentum': uniform(0, 1),
-                       'optimizer__nesterov': [False, True],
-                       # 'optimizer__beta_1': np.linspace(0.8, 0.99, 5),  # Sample 5 values between 0.8 and 0.99
-                       # 'optimizer__beta_2': np.linspace(0.9, 0.999, 5)  # Sample 5 values between 0.9 and 0.999
-                       # 'optimizer__eps ': uniform(0, 0.999),
-                       }
+        joblib_filename = joblib_filenames[i]
         model, params, acc = algo.evalAlgo(param_dists)
         # dump the information of the algorithm into a joblib file.
         # ?? joblib / .pkl
-        dump(model, dataset_dump_folder + name + ".joblib")
+        dump(model, joblib_filename + ".joblib")
         # append the result to the existing Excel sheet.
         df = pd.read_excel(results_dump_file)
         df.loc[len(df.index)] = [dataset_name, algo_name, feature_range, hidden_layer_sizes, str(i),
-                                 dataset_dump_folder + name, params, acc]
+                                 joblib_filename, params, acc]
         df.to_excel(results_dump_file, index=False)
-        print(params, acc)
+        # print(params, acc)
