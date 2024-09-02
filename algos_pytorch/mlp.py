@@ -40,6 +40,40 @@ class MLP(nn.Module):
         x = self.model(x)
         out = F.softmax(x, dim=-1)
         return out
+    
+    def getWeights(self):
+        weights = []
+        for block in self.blocks:
+            if isinstance(block, nn.modules.linear.Linear):
+                weights.append(np.transpose(np.array(block.weight.data)))
+        return weights
+    
+    def setWeights(self, weights):
+        i = 0
+        for block in self.blocks:
+            if isinstance(block, nn.modules.linear.Linear):
+                block.weight.data = torch.tensor(np.transpose(weights[i]), dtype=torch.float32)
+                i = i + 1
+    
+    def getBiases(self):
+        biases = []
+        for block in self.blocks:
+            if isinstance(block, nn.modules.linear.Linear):
+                biases.append(np.array(block.bias.data))
+        return biases
+    
+    def setBiases(self, biases):
+        i = 0
+        for block in self.blocks:
+            if isinstance(block, nn.modules.linear.Linear):
+                block.bias.data = torch.tensor(biases[i], dtype=torch.float32)
+                i = i + 1
+    
+    def getHiddenLayerTopology(self):
+        temp = []
+        for i in range(1, len(self.topology)-1):
+            temp.append(self.topology[i])
+        return temp
 
 
 class Algo:
@@ -52,20 +86,23 @@ class Algo:
                  lr,
                  optimizer,
                  momentum,
-                 nesterov):
+                 nesterov,
+                 verbose=0):
         self.model = NeuralNetClassifier(model,
                                          max_epochs=max_epochs,
                                          lr=lr,
                                          optimizer=optimizer,
                                          optimizer__momentum=momentum,
-                                         optimizer__nesterov=nesterov
+                                         optimizer__nesterov=nesterov,
+                                         verbose=verbose,
                                          ) if task == "classification" else \
             NeuralNetRegressor(model,
                                max_epochs=max_epochs,
                                lr=lr,
                                optimizer=optimizer,
                                optimizer__momentum=momentum,
-                               optimizer__nesterov=nesterov
+                               optimizer__nesterov=nesterov,
+                               verbose=verbose,
                                )
         self.X_train = X_train
         self.X_test = X_test
@@ -109,22 +146,22 @@ class Algo:
 
     def searchAndEvalClassifier(self, param_dists):
         # gs = RandomizedSearchCV(self.model, param_dists, random_state=0, cv=5, n_iter=600, n_jobs=self.nJobs)
-        gs = RandomizedSearchCV(self.model, param_dists, random_state=0, cv=3, n_iter=600)
+        gs = RandomizedSearchCV(self.model, param_dists, random_state=0, cv=3, n_iter=600, verbose=0)
         # gs = GridSearchCV(self.model, param_dists, scoring='f1_micro', cv=3)
         # classifier = GridSearchCV(dt, param_dists, scoring='f1_micro', cv=5)
 
         gs.fit(self.X_train, self.y_train)
-        print('------------ Best -------------')
-        print(gs.best_score_, gs.best_params_)
+        # print('------------ Best -------------')
+        # print(gs.best_score_, gs.best_params_)
         bmodel = gs.best_estimator_
         pred = bmodel.predict(self.X_test)
         accuracy = accuracy_score(pred, self.y_test)
 
         dummy = DummyClassifier(strategy='most_frequent').fit(self.X_train, self.y_train)
-        print("Baseline_Accuracy: {}".format(accuracy_score(dummy.predict(self.X_test), self.y_test)))
+        # print("Baseline_Accuracy: {}".format(accuracy_score(dummy.predict(self.X_test), self.y_test)))
         # print('**** Classifier ****')
 
-        print("accuracy score: ", accuracy)
+        # print("accuracy score: ", accuracy)
         return bmodel, gs.best_params_, accuracy
 
     def searchAndEvalRegressor(self, param_dists):

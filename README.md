@@ -19,3 +19,9 @@ the parameters are explained in the script. If using linux, then "python" keywor
 - choose_joblibs_postskorch.py is the script for the current framework that quantizes the weights and biases or the joblibs for the dataset(s) under the folder FOLDERNAME, the float weights and biases are quantized to integers (without re-training), their accuracies are calculated and recorded in the results tables under each folder, and then, the joblib model with the highest accuracy after quantization is chosen to be used. The list of models chosen will be in the folder FOLDERNAME, in the file "summary_fxp.xlsx". You can use this by entering:
 choose_joblibs_postskorch.py DATASET_NAME INPUT_BWIDTH RANGE FOLDERNAME
 
+- quantize_joblibs_postskorch_po2.py is the script to take the chosen joblib file with the trained MLP and quantize it to power-of-2 weights and biases. The script uses the "quantize_model" function in the folder "qat_blocks", and after quantization, it re-trains the MLP using QAT (Quantization Aware Training) so that the accuracy drop is minimized. You can use this by entering:
+quantize_joblibs_postskorch_po2.py DATASET_NAME INPUT_BWIDTH RANGE FOLDERNAME
+
+- choose_qatmodels_postqkeras.py is the script that will search and find the best quantization result. The previous script quantizes the network in different bit precision and records the accuracy at each increment, which enables the user to find and choose the specific model to use. You can use this by entering:
+choose_qatmodels.py FOLDERNAME
+

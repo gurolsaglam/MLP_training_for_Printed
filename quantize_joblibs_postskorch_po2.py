@@ -52,13 +52,13 @@ if __name__ == "__main__":
         accuracy_drops = []
         for joblib_filename in joblib_filenames:
             #quantize the model and get accuracy
-            quantized_accuracy = quantize_model(dataset_name, "./"+joblib_filename+".joblib", feature_range, input_bitwidth, weight_bitwidth, bias_bitwidth, relu_bitwidth, "fxp")
+            quantized_accuracy = quantize_model(dataset_name, "./"+joblib_filename+".joblib", feature_range, input_bitwidth, weight_bitwidth, bias_bitwidth, relu_bitwidth, "fxp_po2")
             original_accuracy = df[df.joblib_filename == joblib_filename]["accuracy"].values[0]
             accuracy_drop = original_accuracy - quantized_accuracy
             quantized_accuracies.append(quantized_accuracy)
             accuracy_drops.append(accuracy_drop)
-        df["fxp_accuracy"] = quantized_accuracies
-        df["orig-fxp-drop"] = accuracy_drops
+        df["fxppo2_accuracy_qkeras"] = quantized_accuracies
+        df["orig-fxppo2-drop_qkeras"] = accuracy_drops
         df.to_excel(results_dump_file, index=False)
         
         #from the original and quantized models, choose the best one. #TODO
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     
     df_all = pd.concat(dfs_all, ignore_index=True)
     # df_all.to_excel(trained_models + "/summary_results_table_all.xlsx", index=False)
-    df_all.to_excel(trained_models + "/summary_fxp_all.xlsx", index=False)
+    df_all.to_excel(trained_models + "/summary_fxppo2_all_qkeras.xlsx", index=False)
     
     datasets = np.unique(df_all["dataset"].values)
     results = []
@@ -77,16 +77,16 @@ if __name__ == "__main__":
         df_sub = df[df.accuracy >= avg_acc]
         #df_sub = df_sub[df_sub.fxp_accuracy >= avg_acc]
         #df_res = df_sub[df_sub["orig-fxp-drop"] == df_sub["orig-fxp-drop"].min()]
-        df_res = df_sub[df_sub["fxp_accuracy"] == df_sub["fxp_accuracy"].max()]
+        df_res = df_sub[df_sub["fxppo2_accuracy_qkeras"] == df_sub["fxppo2_accuracy_qkeras"].max()]
         if (len(df_res.index) > 1):
             #df_res = df_res[df_res["fxp_accuracy"] == df_res["fxp_accuracy"].max()]
-            df_res = df_res[df_res["orig-fxp-drop"] == df_res["orig-fxp-drop"].min()]
+            df_res = df_res[df_res["orig-fxppo2-drop_qkeras"] == df_res["orig-fxppo2-drop_qkeras"].min()]
             if (len(df_res.index) > 1):
                 df_res = df_res[df_res["joblib_filename"] == df_res.iloc[0]["joblib_filename"]]
         results.append(df_res)
     df_last = pd.concat(results, ignore_index=True)
     # df_last.to_excel(trained_models + "/summary_results_table.xlsx", index=False)
-    df_last.to_excel(trained_models + "/summary_fxp.xlsx", index=False)
+    df_last.to_excel(trained_models + "/summary_fxppo2_qkeras.xlsx", index=False)
     
     
     
