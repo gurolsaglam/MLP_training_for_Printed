@@ -22,15 +22,10 @@ seed = 0
 np.random.seed(seed)
 tf.random.set_seed(seed)
 
-def blackbox(loaded_model, weight_bias_size, relu_size, 
+def blackbox(fxp_model, weight_bias_size, relu_size, 
                 X_train, Y_train, X_test, Y_test, 
                 epochs, optimizer_lr, pruning_params, signed):
     
-    #set the number of neurons per layer
-    # hidden_layer_sizes = loaded_model.hidden_layer_sizes
-    #get weights and biases
-    params = loaded_model.get_params()
-    fxp_model = params["module"]
     hidden_layer_sizes = fxp_model.getHiddenLayerTopology()
     if type(hidden_layer_sizes) == int:
         hidden_layer_sizes = np.array([hidden_layer_sizes])
@@ -96,8 +91,6 @@ def blackbox(loaded_model, weight_bias_size, relu_size,
     #model = prune.prune_low_magnitude(model, **pruning_params)
     
     #Set the weights from loaded model to the QKeras model
-    # wb1=[loaded_model.coefs_[0], loaded_model.intercepts_[0]]
-    # wb2=[loaded_model.coefs_[1], loaded_model.intercepts_[1]]
     wb1=[fxp_model.getWeights()[0], fxp_model.getBiases()[0]]
     wb2=[fxp_model.getWeights()[1], fxp_model.getBiases()[1]]
     model.layers[0].set_weights(wb1)

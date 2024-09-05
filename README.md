@@ -22,6 +22,3 @@ choose_joblibs_postskorch.py DATASET_NAME INPUT_BWIDTH RANGE FOLDERNAME
 - quantize_joblibs_postskorch_po2.py is the script to take the chosen joblib file with the trained MLP and quantize it to power-of-2 weights and biases. The script uses the "quantize_model" function in the folder "qat_blocks", and after quantization, it re-trains the MLP using QAT (Quantization Aware Training) so that the accuracy drop is minimized. You can use this by entering:
 quantize_joblibs_postskorch_po2.py DATASET_NAME INPUT_BWIDTH RANGE FOLDERNAME
 
-- choose_qatmodels_postqkeras.py is the script that will search and find the best quantization result. The previous script quantizes the network in different bit precision and records the accuracy at each increment, which enables the user to find and choose the specific model to use. You can use this by entering:
-choose_qatmodels.py FOLDERNAME
-

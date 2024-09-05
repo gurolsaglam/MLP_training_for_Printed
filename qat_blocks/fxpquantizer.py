@@ -84,7 +84,7 @@ def get_model_values(model):
             coefficients.append(weight)
     return coefficients, intercepts
 
-def get_model_po2(fxp_weights, fxp_biases, relu_bitwidth, dataset):
+def get_model_po2(loaded_model, fxp_weights, fxp_biases, relu_bitwidth, dataset):
     #weight and bias bit sizes
     hl_weight_size = (fxp_weights[0].get_width(), fxp_weights[0].int) #(total bits, decimal part bits)
     hl_bias_size = (fxp_biases[0].get_width(), fxp_biases[0].int) #(total bits, decimal part bits)
@@ -126,7 +126,7 @@ def quantize_model(dataset_name, joblib_filename, feature_range, input_bitwidth,
     fxp_inputs, fxp_qrelu, fxp_weights, fxp_biases = get_fxp_configs(coefficients, intercepts, input_bitwidth, weight_bitwidth)
     
     if (fxp_type == "fxp_po2"):
-        coefficients, intercepts = get_model_po2(fxp_weights, fxp_biases, relu_bitwidth, dataset)
+        model, coefficients, intercepts = get_model_po2(model, fxp_weights, fxp_biases, relu_bitwidth, dataset)
     
     #initialize the MLP model.
     last_layer = "relu"
@@ -136,4 +136,4 @@ def quantize_model(dataset_name, joblib_filename, feature_range, input_bitwidth,
     ##Get integer model accuracy
     acc_int = qmlp.get_accuracy(dataset.Xtest.values, Y_test)
     
-    return acc_int
+    return acc_int, model

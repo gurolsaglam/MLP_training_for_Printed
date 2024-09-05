@@ -52,7 +52,7 @@ if __name__ == "__main__":
         accuracy_drops = []
         for joblib_filename in joblib_filenames:
             #quantize the model and get accuracy
-            quantized_accuracy = quantize_model(dataset_name, "./"+joblib_filename+".joblib", feature_range, input_bitwidth, weight_bitwidth, bias_bitwidth, relu_bitwidth, "fxp")
+            quantized_accuracy, model = quantize_model(dataset_name, "./"+joblib_filename+".joblib", feature_range, input_bitwidth, weight_bitwidth, bias_bitwidth, relu_bitwidth, "fxp")
             original_accuracy = df[df.joblib_filename == joblib_filename]["accuracy"].values[0]
             accuracy_drop = original_accuracy - quantized_accuracy
             quantized_accuracies.append(quantized_accuracy)

@@ -52,7 +52,7 @@ if __name__ == "__main__":
         accuracy_drops = []
         for joblib_filename in joblib_filenames:
             #quantize the model and get accuracy
-            quantized_accuracy = quantize_model(dataset_name, "./"+joblib_filename+".joblib", feature_range, input_bitwidth, weight_bitwidth, bias_bitwidth, relu_bitwidth, "fxp_po2")
+            quantized_accuracy, model = quantize_model(dataset_name, "./"+joblib_filename+".joblib", feature_range, input_bitwidth, weight_bitwidth, bias_bitwidth, relu_bitwidth, "fxp_po2")
             original_accuracy = df[df.joblib_filename == joblib_filename]["accuracy"].values[0]
             accuracy_drop = original_accuracy - quantized_accuracy
             quantized_accuracies.append(quantized_accuracy)
@@ -69,24 +69,62 @@ if __name__ == "__main__":
     # df_all.to_excel(trained_models + "/summary_results_table_all.xlsx", index=False)
     df_all.to_excel(trained_models + "/summary_fxppo2_all_qkeras.xlsx", index=False)
     
+    # df_all = pd.read_excel(trained_models + "/summary_fxppo2_all_qkeras.xlsx")
+    
     datasets = np.unique(df_all["dataset"].values)
     results = []
-    for dataset in datasets:
-        df = df_all[df_all.dataset == dataset]
+    for dataset_name in datasets:
+        #get the models of the specific dataset.
+        df = df_all[df_all.dataset == dataset_name]
+        
+        #find the average accuracy of the floating point models and drop the models below the accuracy.
         avg_acc = df["accuracy"].mean()
         df_sub = df[df.accuracy >= avg_acc]
         #df_sub = df_sub[df_sub.fxp_accuracy >= avg_acc]
         #df_res = df_sub[df_sub["orig-fxp-drop"] == df_sub["orig-fxp-drop"].min()]
-        df_res = df_sub[df_sub["fxppo2_accuracy_qkeras"] == df_sub["fxppo2_accuracy_qkeras"].max()]
+        
+        #find the max fxppo2 accuracy and drop the models if their fxppo2 accuracy is more than 2% lower than the max accuracy.
+        max_acc = df_sub["fxppo2_accuracy_qkeras"].max()
+        df_sub = df_sub[df_sub["fxppo2_accuracy_qkeras"] >= (max_acc-0.02)]
+        
+        #find the minimal absolute accuracy difference
+        diffs = df_sub["orig-fxppo2-drop_qkeras"].values
+        diffs = np.abs(diffs)
+        df_sub["abs-orig-fxppo2-drop_qkeras"] = diffs
+        df_sub = df_sub[df_sub["abs-orig-fxppo2-drop_qkeras"] < (df_sub["abs-orig-fxppo2-drop_qkeras"].min()+0.01)]
+        # # min_abs_drop_index = np.argmin(diffs)
+        
+        #get the model with minimal absolute accuracy difference
+        # # df_res = df_sub.iloc[[min_abs_drop_index]]
+        df_res = df_sub
         if (len(df_res.index) > 1):
-            #df_res = df_res[df_res["fxp_accuracy"] == df_res["fxp_accuracy"].max()]
-            df_res = df_res[df_res["orig-fxppo2-drop_qkeras"] == df_res["orig-fxppo2-drop_qkeras"].min()]
+            df_res = df_res[df_res["fxppo2_accuracy_qkeras"] == df_res["fxppo2_accuracy_qkeras"].max()]
             if (len(df_res.index) > 1):
                 df_res = df_res[df_res["joblib_filename"] == df_res.iloc[0]["joblib_filename"]]
         results.append(df_res)
+        
+        #THIS IS THE OLD MAX MODEL FINDER
+        # df_res = df_sub[df_sub["fxppo2_accuracy_qkeras"] == max_acc]
+        # if (len(df_res.index) > 1):
+            # # df_res = df_res[df_res["fxp_accuracy"] == df_res["fxp_accuracy"].max()]
+            # df_res = df_res[df_res["orig-fxppo2-drop_qkeras"] == df_res["orig-fxppo2-drop_qkeras"].min()]
+            # if (len(df_res.index) > 1):
+                # df_res = df_res[df_res["joblib_filename"] == df_res.iloc[0]["joblib_filename"]]
+        # # results.append(df_res)
     df_last = pd.concat(results, ignore_index=True)
     # df_last.to_excel(trained_models + "/summary_results_table.xlsx", index=False)
     df_last.to_excel(trained_models + "/summary_fxppo2_qkeras.xlsx", index=False)
+    
+    #Recreate the fxppo2_qkeras models (load the floatingpoint model and quantize), and then save the models.
+    qat_models = "postqat/"
+    for dataset_name in datasets:
+        model_save_folder = qat_models + "MLP/" + dataset_name + "/"
+        if not os.path.exists(model_save_folder):
+            os.makedirs(model_save_folder)
+        model_info = df_last[df_last.dataset == dataset_name]
+        joblib_filename = model_info["joblib_filename"].values[0]
+        quantized_accuracy, model = quantize_model(dataset_name, "./"+joblib_filename+".joblib", feature_range, input_bitwidth, weight_bitwidth, bias_bitwidth, relu_bitwidth, "fxp_po2")
+        model.save(model_save_folder + dataset_name + ".keras")
     
     
     
