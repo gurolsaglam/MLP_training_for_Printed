@@ -16,7 +16,7 @@ from joblib import load
 from datasets.read_datasets import Dataset
 from qat_blocks.fxpconverter import *
 from mlp_blocks.MLP_Conventional import *
-import qat_blocks.blackbox as bb
+import qat_blocks.blackbox_fxppo2 as bb
 
 def get_quantized_dataset(dataset_name, feature_range, input_bitwidth):
     #print("Dataset is: " + dataset_name)
@@ -49,7 +49,7 @@ def get_model(joblib_filename):
     intercepts = model.getBiases()
     return model, coefficients, intercepts
 
-def get_fxp_configs(coefficients, intercepts, input_bitwidth, weight_bitwidth):
+def get_fxp_configs(coefficients, intercepts, input_bitwidth, weight_bitwidth, relu_bitwidth):
     #get configurations.
     fxp_inputs = [fxpconverter(0, 0, input_bitwidth)]
     # fxp_qrelu = [fxpconverter(0, int_part_relu, frac_part_relu), fxpconverter(0, 6, 26)] #useful for qkeras models that have qrelu already.
@@ -60,13 +60,16 @@ def get_fxp_configs(coefficients, intercepts, input_bitwidth, weight_bitwidth):
     w_frac = weight_bitwidth - 1 - w_int
     fxp_weights = [fxpconverter(1, w_int, w_frac), fxpconverter(1, w_int, w_frac)]
     
+    #make a temporary array for all inputs of layers for bias max bitwidth calculation
+    fxp_inputs_all = [fxpconverter(0, 0, input_bitwidth), fxpconverter(0, 0, relu_bitwidth)]
     # trunc 1st relu
     L0trunc = 0
     trlst = [0,L0trunc]
     fxp_biases=[]
     for i, c in enumerate(intercepts):
         b_int = get_width(get_maxabs(c))
-        fxp_biases.append(fxpconverter(1, b_int, fxp_inputs[0].frac+(i+1)*fxp_weights[i].frac-trlst[i]))
+        # fxp_biases.append(fxpconverter(1, b_int, fxp_inputs[0].frac+(i+1)*fxp_weights[i].frac-trlst[i]))
+        fxp_biases.append(fxpconverter(1, b_int, fxp_inputs_all[i].frac+fxp_weights[i].frac))
     
     return fxp_inputs, fxp_qrelu, fxp_weights, fxp_biases
 
@@ -123,7 +126,7 @@ def quantize_model(dataset_name, joblib_filename, feature_range, input_bitwidth,
     model, coefficients, intercepts = get_model(joblib_filename)
     
     #get model features.
-    fxp_inputs, fxp_qrelu, fxp_weights, fxp_biases = get_fxp_configs(coefficients, intercepts, input_bitwidth, weight_bitwidth)
+    fxp_inputs, fxp_qrelu, fxp_weights, fxp_biases = get_fxp_configs(coefficients, intercepts, input_bitwidth, weight_bitwidth, relu_bitwidth)
     
     if (fxp_type == "fxp_po2"):
         model, coefficients, intercepts = get_model_po2(model, fxp_weights, fxp_biases, relu_bitwidth, dataset)

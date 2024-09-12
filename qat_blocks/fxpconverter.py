@@ -15,20 +15,27 @@ class fxpconverter:
         if integer<0 or fraction<0:
             print("invalid fxp",integer, fraction)
             sys.exit()
+    
     def get_width(self):
         return (self.s + self.int + self.frac)
-
+    
     def get_fxp(self):
         return (self.s, self.int, self.frac)
-
+    
     def to_float(self,x):
         return to_float(x,self.frac)
-
+    
     def to_fixed(self, f):
         b=to_fixed(f,self.frac)
         maxval=1<<(self.int+self.frac)
         b=np.clip(b,-1*self.s*maxval,maxval-1)
         return int(b)
+    
+    def __repr__(self):
+        return "[" + str(self.s) + ", " + str(self.int) + ", " + str(self.frac) + "]"
+    
+    def __str__(self):
+        return "[" + str(self.s) + ", " + str(self.int) + ", " + str(self.frac) + "]"
 
 
 def to_float(x,e):

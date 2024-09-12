@@ -8,11 +8,12 @@ from tensorflow.keras.models import Sequential
 from qkeras.qlayers import QDense, QActivation, QAdaptiveActivation
 from qkeras.quantizers import quantized_po2, quantized_relu
 from tensorflow.keras.regularizers import l1
-from tensorflow.keras.layers import Activation
+from tensorflow.keras.layers import Input, Activation
 from tensorflow.keras.optimizers import Adam
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_schedule, prune, pruning_callbacks
 from tensorflow_model_optimization.sparsity.keras import strip_pruning
 from keras.constraints import NonNeg
+from qkeras.utils import model_save_quantized_weights
 
 #Our packages
 from qat_blocks.callbacks import all_callbacks_wosavepoint
@@ -22,11 +23,11 @@ seed = 0
 np.random.seed(seed)
 tf.random.set_seed(seed)
 
-def blackbox(fxp_model, weight_bias_size, relu_size, 
+def blackbox(loaded_model, weight_bias_size, relu_size, 
                 X_train, Y_train, X_test, Y_test, 
                 epochs, optimizer_lr, pruning_params, signed):
     
-    hidden_layer_sizes = fxp_model.getHiddenLayerTopology()
+    hidden_layer_sizes = loaded_model.getHiddenLayerTopology()
     if type(hidden_layer_sizes) == int:
         hidden_layer_sizes = np.array([hidden_layer_sizes])
     input_layer = X_train.shape[1]
@@ -47,7 +48,9 @@ def blackbox(fxp_model, weight_bias_size, relu_size,
     
     #Setup the MLP Network in QKeras
     model = Sequential()
-    model.add(QDense(hidden_layer, input_shape = (input_layer,), name = 'fc1', 
+    model.add(Input(shape=(input_layer,)))
+    
+    model.add(QDense(hidden_layer, name = 'fc1', 
                 kernel_quantizer = quantized_po2(weight_bias_size[0][0][0],
                                                 max_value=hl_kq_maxv,
                                                 use_stochastic_rounding=False,
@@ -91,10 +94,12 @@ def blackbox(fxp_model, weight_bias_size, relu_size,
     #model = prune.prune_low_magnitude(model, **pruning_params)
     
     #Set the weights from loaded model to the QKeras model
-    wb1=[fxp_model.getWeights()[0], fxp_model.getBiases()[0]]
-    wb2=[fxp_model.getWeights()[1], fxp_model.getBiases()[1]]
+    wb1=[loaded_model.getWeights()[0], loaded_model.getBiases()[0]]
+    wb2=[loaded_model.getWeights()[1], loaded_model.getBiases()[1]]
+    
     model.layers[0].set_weights(wb1)
     model.layers[2].set_weights(wb2)
+    
     
     #Train the new model
     adam = Adam(learning_rate=optimizer_lr)
@@ -107,6 +112,8 @@ def blackbox(fxp_model, weight_bias_size, relu_size,
     history = model.fit(X_train, Y_train, batch_size=1,
               epochs=epochs,validation_split=0.2, verbose=0, shuffle=True,
               callbacks = callbacks.callbacks)
+    model_save_quantized_weights(model)
+    
     # model = strip_pruning(model)
     model.compile(optimizer=adam, loss=['categorical_crossentropy'], metrics=['accuracy'])
     

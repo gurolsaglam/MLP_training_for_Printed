@@ -71,7 +71,6 @@ if __name__ == "__main__":
     
     # df_all = pd.read_excel(trained_models + "/summary_fxppo2_all_qkeras.xlsx")
     
-    datasets = np.unique(df_all["dataset"].values)
     results = []
     for dataset_name in datasets:
         #get the models of the specific dataset.
@@ -100,7 +99,9 @@ if __name__ == "__main__":
         if (len(df_res.index) > 1):
             df_res = df_res[df_res["fxppo2_accuracy_qkeras"] == df_res["fxppo2_accuracy_qkeras"].max()]
             if (len(df_res.index) > 1):
-                df_res = df_res[df_res["joblib_filename"] == df_res.iloc[0]["joblib_filename"]]
+                df_res = df_res[df_res["abs-orig-fxppo2-drop_qkeras"] == df_res["abs-orig-fxppo2-drop_qkeras"].min()]
+                if (len(df_res.index) > 1):
+                    df_res = df_res[df_res["joblib_filename"] == df_res.iloc[0]["joblib_filename"]]
         results.append(df_res)
         
         #THIS IS THE OLD MAX MODEL FINDER
@@ -117,6 +118,7 @@ if __name__ == "__main__":
     
     #Recreate the fxppo2_qkeras models (load the floatingpoint model and quantize), and then save the models.
     qat_models = "postqat/"
+    qrelus = []
     for dataset_name in datasets:
         model_save_folder = qat_models + "MLP/" + dataset_name + "/"
         if not os.path.exists(model_save_folder):
@@ -124,7 +126,11 @@ if __name__ == "__main__":
         model_info = df_last[df_last.dataset == dataset_name]
         joblib_filename = model_info["joblib_filename"].values[0]
         quantized_accuracy, model = quantize_model(dataset_name, "./"+joblib_filename+".joblib", feature_range, input_bitwidth, weight_bitwidth, bias_bitwidth, relu_bitwidth, "fxp_po2")
+        quantized_relu = model.layers[1].quantizer
+        qrelus.append(quantized_relu)
         model.save(model_save_folder + dataset_name + ".keras")
+    df_last["quantized_relu"] = qrelus
+    df_last.to_excel(trained_models + "/summary_fxppo2_qkeras.xlsx", index=False)
     
     
     
