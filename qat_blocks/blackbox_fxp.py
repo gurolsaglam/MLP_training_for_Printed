@@ -69,7 +69,7 @@ def blackbox_int(fxp_model, weight_bias_size, relu_size,
                 kernel_constraint = None if (signed==1) else NonNeg())) #signed/unsigned weights and biases
     
     #this adaptive activation layer of qrelu was added by Gurol, to find the best qrelu precision.
-    model.add(QAdaptiveActivation(activation="quantized_relu", total_bits=relu_size[0], name='relu1', quantization_delay=5))#, po2_rounding=True))
+    model.add(QAdaptiveActivation(activation="quantized_relu", total_bits=relu_size[0], name='relu1', quantization_delay=1))#, po2_rounding=True))
     #model.add(QActivation(activation=quantized_relu(relu_size[0], relu_size[1], use_stochastic_rounding=False), name='relu1'))
     
     model.add(QDense(output_layer, name = 'output',
